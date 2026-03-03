@@ -1,54 +1,818 @@
 <!DOCTYPE html>
-<html style="width:100%;height:100%;background-color:black;">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0" />
-		<meta name="description" content="EaglercraftX 1.8 test directory HTML page" />
-		<meta name="keywords" content="eaglercraft, eaglercraftx, minecraft, 1.8, 1.8.8" />
-		<title>EaglercraftX 1.8</title>
-		<meta property="og:locale" content="en-US" />
-		<meta property="og:type" content="website" />
-		<meta property="og:title" content="EaglercraftX 1.8" />
-		<meta property="og:description" content="test directory HTML page" />
-		<link type="image/png" rel="shortcut icon" href="favicon.png" />
-		<script type="text/javascript" src="classes.js"></script>
-		<script type="text/javascript">
-			"use strict";
-			window.addEventListener("load", function() {
-				if(window.location.href.indexOf("file:") === 0) {
-					alert("HTTP please, do not open this file locally, run a local HTTP server and load it via HTTP");
-				}else {
-					var relayId = Math.floor(Math.random() * 3);
-					window.eaglercraftXOpts = {
-						demoMode: false,
-						container: "game_frame",
-						assetsURI: "assets.epk",
-						localesURI: "lang/",
-						worldsDB: "worlds",
-						logInvalidCerts: true,
-						crashOnUncaughtExceptions: true,
-						servers: [
-							{ addr: "ws://localhost:8081/", name: "Local test server" }
-						],
-						relays: [
-							{ addr: "wss://relay.deev.is/", comment: "lax1dude relay #1", primary: relayId === 0 },
-							{ addr: "wss://relay.lax1dude.net/", comment: "lax1dude relay #2", primary: relayId === 1 },
-							{ addr: "wss://relay.shhnowisnottheti.me/", comment: "ayunami relay #1", primary: relayId === 2 }
-						]
-					};
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ZYN — Eaglercraft Client</title>
+<link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --purple: #9b30ff;
+    --purple-dim: #6a1fc2;
+    --purple-dark: #2a0a4a;
+    --bg: #050508;
+    --bg2: #0a0a12;
+    --text: #e8d5ff;
+    --text-dim: #7a6a9a;
+    --glitch1: #ff2dff;
+    --glitch2: #00f5ff;
+  }
 
-					var q = window.location.search;
-					if((typeof q === "string") && q[0] === "?" && (typeof window.URLSearchParams !== "undefined")) {
-						q = new window.URLSearchParams(q);
-						var s = q.get("server");
-						if(s) window.eaglercraftXOpts.joinServer = s;
-					}
+  * { margin: 0; padding: 0; box-sizing: border-box; }
 
-					main();
-				}
-			});
-		</script>
-	</head>
-	<body style="margin:0px;width:100%;height:100%;overflow:hidden;background-color:black;" id="game_frame">
-	</body>
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Space Mono', monospace;
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+
+  /* SCANLINES */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.15) 2px,
+      rgba(0,0,0,0.15) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* NOISE OVERLAY */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: -50%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9998;
+    opacity: 0.4;
+    animation: noiseMove 0.5s steps(2) infinite;
+  }
+
+  @keyframes noiseMove {
+    0% { transform: translate(0,0); }
+    25% { transform: translate(-1%,-1%); }
+    50% { transform: translate(1%,1%); }
+    75% { transform: translate(-1%,1%); }
+    100% { transform: translate(0,0); }
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 1000;
+    padding: 1.2rem 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(155,48,255,0.2);
+    background: rgba(5,5,8,0.85);
+    backdrop-filter: blur(12px);
+  }
+
+  .nav-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 0.3em;
+    color: var(--purple);
+    text-shadow: 0 0 20px var(--purple), 0 0 40px var(--purple-dim);
+    position: relative;
+  }
+
+  .nav-logo::before {
+    content: 'ZYN';
+    position: absolute;
+    left: -2px;
+    color: var(--glitch1);
+    opacity: 0;
+    animation: navGlitch 4s infinite;
+  }
+
+  @keyframes navGlitch {
+    0%, 90%, 100% { opacity: 0; transform: none; }
+    92% { opacity: 0.8; transform: translateX(-3px); clip-path: polygon(0 20%, 100% 20%, 100% 40%, 0 40%); }
+    94% { opacity: 0.8; transform: translateX(3px); clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%); }
+    96% { opacity: 0; }
+  }
+
+  .nav-links { display: flex; gap: 2rem; list-style: none; }
+  .nav-links a {
+    color: var(--text-dim);
+    text-decoration: none;
+    font-size: 0.7rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    transition: color 0.2s;
+    position: relative;
+  }
+  .nav-links a::after {
+    content: '';
+    position: absolute;
+    bottom: -4px; left: 0;
+    width: 0; height: 1px;
+    background: var(--purple);
+    transition: width 0.3s;
+  }
+  .nav-links a:hover { color: var(--purple); }
+  .nav-links a:hover::after { width: 100%; }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    position: relative;
+    padding: 2rem;
+    overflow: hidden;
+  }
+
+  /* GRID BG */
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(155,48,255,0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(155,48,255,0.07) 1px, transparent 1px);
+    background-size: 60px 60px;
+    animation: gridPan 20s linear infinite;
+  }
+
+  @keyframes gridPan {
+    0% { background-position: 0 0; }
+    100% { background-position: 60px 60px; }
+  }
+
+  /* PURPLE GLOW ORBS */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    pointer-events: none;
+  }
+  .orb1 {
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(155,48,255,0.25), transparent 70%);
+    top: -100px; left: -100px;
+    animation: orbFloat 8s ease-in-out infinite;
+  }
+  .orb2 {
+    width: 400px; height: 400px;
+    background: radial-gradient(circle, rgba(106,31,194,0.2), transparent 70%);
+    bottom: -80px; right: -80px;
+    animation: orbFloat 10s ease-in-out infinite reverse;
+  }
+
+  @keyframes orbFloat {
+    0%, 100% { transform: translate(0,0); }
+    50% { transform: translate(30px, -30px); }
+  }
+
+  .hero-content { position: relative; z-index: 1; }
+
+  .hero-eyebrow {
+    font-size: 0.65rem;
+    letter-spacing: 0.5em;
+    color: var(--purple);
+    text-transform: uppercase;
+    margin-bottom: 1.5rem;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.3s;
+  }
+
+  .hero-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(6rem, 18vw, 16rem);
+    line-height: 0.9;
+    letter-spacing: 0.05em;
+    color: #fff;
+    position: relative;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.5s;
+  }
+
+  .hero-title .glitch-wrap {
+    position: relative;
+    display: inline-block;
+    color: var(--purple);
+    text-shadow: 0 0 60px rgba(155,48,255,0.6);
+  }
+
+  .hero-title .glitch-wrap::before,
+  .hero-title .glitch-wrap::after {
+    content: 'ZYN';
+    position: absolute;
+    inset: 0;
+    font-family: 'Bebas Neue', sans-serif;
+  }
+  .hero-title .glitch-wrap::before {
+    color: var(--glitch1);
+    animation: glitchA 3s infinite;
+    clip-path: polygon(0 0, 100% 0, 100% 35%, 0 35%);
+  }
+  .hero-title .glitch-wrap::after {
+    color: var(--glitch2);
+    animation: glitchB 3s infinite;
+    clip-path: polygon(0 65%, 100% 65%, 100% 100%, 0 100%);
+  }
+
+  @keyframes glitchA {
+    0%, 85%, 100% { transform: none; opacity: 0; }
+    87% { transform: translateX(-6px); opacity: 0.8; }
+    89% { transform: translateX(4px); opacity: 0.6; }
+    91% { opacity: 0; }
+  }
+  @keyframes glitchB {
+    0%, 85%, 100% { transform: none; opacity: 0; }
+    88% { transform: translateX(6px); opacity: 0.8; }
+    90% { transform: translateX(-4px); opacity: 0.6; }
+    92% { opacity: 0; }
+  }
+
+  .hero-sub {
+    font-size: 0.8rem;
+    letter-spacing: 0.25em;
+    color: var(--text-dim);
+    margin-top: 1rem;
+    text-transform: uppercase;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.7s;
+  }
+
+  .hero-sub span { color: var(--purple); }
+
+  .hero-cta {
+    margin-top: 3rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    opacity: 0;
+    animation: fadeUp 0.8s ease forwards 0.9s;
+  }
+
+  .btn-primary {
+    padding: 0.9rem 2.5rem;
+    background: var(--purple);
+    color: #fff;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: none;
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    position: relative;
+    cursor: crosshair;
+    transition: all 0.2s;
+    box-shadow: 0 0 30px rgba(155,48,255,0.4);
+  }
+  .btn-primary:hover {
+    background: var(--glitch1);
+    box-shadow: 0 0 50px rgba(255,45,255,0.6);
+    transform: translateY(-2px);
+  }
+
+  .btn-secondary {
+    padding: 0.9rem 2.5rem;
+    background: transparent;
+    color: var(--purple);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    letter-spacing: 0.2em;
+    text-transform: uppercase;
+    text-decoration: none;
+    border: 1px solid var(--purple);
+    clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+    cursor: crosshair;
+    transition: all 0.2s;
+  }
+  .btn-secondary:hover {
+    background: rgba(155,48,255,0.1);
+    box-shadow: 0 0 20px rgba(155,48,255,0.3);
+  }
+
+  /* STATS BAR */
+  .stats-bar {
+    background: rgba(10,10,18,0.9);
+    border-top: 1px solid rgba(155,48,255,0.2);
+    border-bottom: 1px solid rgba(155,48,255,0.2);
+    padding: 1.2rem 0;
+    display: flex;
+    justify-content: center;
+    gap: 5rem;
+    overflow: hidden;
+    position: relative;
+  }
+  .stat { text-align: center; }
+  .stat-num {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    color: var(--purple);
+    text-shadow: 0 0 20px var(--purple);
+    letter-spacing: 0.1em;
+  }
+  .stat-label {
+    font-size: 0.6rem;
+    letter-spacing: 0.3em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-top: 0.2rem;
+  }
+
+  /* SECTION COMMON */
+  section { padding: 6rem 2rem; }
+  .section-header {
+    text-align: center;
+    margin-bottom: 4rem;
+  }
+  .section-tag {
+    font-size: 0.6rem;
+    letter-spacing: 0.5em;
+    color: var(--purple);
+    text-transform: uppercase;
+    margin-bottom: 0.8rem;
+    display: block;
+  }
+  .section-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: clamp(2.5rem, 6vw, 5rem);
+    letter-spacing: 0.1em;
+    color: #fff;
+    line-height: 1;
+  }
+  .section-title span { color: var(--purple); }
+
+  /* FEATURES */
+  #features { background: var(--bg2); }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5px;
+    max-width: 1200px;
+    margin: 0 auto;
+    background: rgba(155,48,255,0.15);
+    border: 1px solid rgba(155,48,255,0.15);
+  }
+
+  .feature-card {
+    background: var(--bg2);
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+    transition: background 0.3s;
+    cursor: crosshair;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, var(--purple), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s;
+  }
+  .feature-card:hover::before { transform: translateX(100%); }
+  .feature-card:hover { background: rgba(155,48,255,0.05); }
+
+  .feature-cat {
+    font-size: 0.55rem;
+    letter-spacing: 0.4em;
+    color: var(--purple);
+    text-transform: uppercase;
+    margin-bottom: 1rem;
+  }
+  .feature-name {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 0.1em;
+    color: #fff;
+    margin-bottom: 0.5rem;
+  }
+  .feature-desc {
+    font-size: 0.7rem;
+    line-height: 1.7;
+    color: var(--text-dim);
+  }
+  .feature-icon {
+    position: absolute;
+    bottom: 1rem; right: 1.5rem;
+    font-size: 2rem;
+    opacity: 0.08;
+  }
+
+  /* MODULE TAGS */
+  .module-list {
+    max-width: 1000px;
+    margin: 3rem auto 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+  }
+  .module-tag {
+    padding: 0.4rem 1rem;
+    border: 1px solid rgba(155,48,255,0.3);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .module-tag:hover {
+    border-color: var(--purple);
+    color: var(--purple);
+    background: rgba(155,48,255,0.08);
+    text-shadow: 0 0 10px var(--purple);
+  }
+
+  /* CHANGELOG */
+  #changelog { background: var(--bg); }
+
+  .changelog-list {
+    max-width: 800px;
+    margin: 0 auto;
+    position: relative;
+  }
+  .changelog-list::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 1px;
+    background: linear-gradient(to bottom, transparent, var(--purple), transparent);
+  }
+
+  .changelog-entry {
+    padding: 2rem 2rem 2rem 2.5rem;
+    position: relative;
+    border-bottom: 1px solid rgba(155,48,255,0.1);
+  }
+  .changelog-entry::before {
+    content: '';
+    position: absolute;
+    left: -4px; top: 2.3rem;
+    width: 9px; height: 9px;
+    background: var(--purple);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--purple);
+  }
+
+  .changelog-version {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.4rem;
+    letter-spacing: 0.15em;
+    color: var(--purple);
+    display: inline-block;
+    margin-right: 1rem;
+  }
+  .changelog-date {
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .changelog-items {
+    margin-top: 1rem;
+    list-style: none;
+  }
+  .changelog-items li {
+    font-size: 0.72rem;
+    line-height: 2;
+    color: var(--text-dim);
+    padding-left: 1rem;
+    position: relative;
+  }
+  .changelog-items li::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    color: var(--purple);
+  }
+  .changelog-items li span { color: var(--text); }
+
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    font-size: 0.55rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-left: 0.5rem;
+    vertical-align: middle;
+  }
+  .badge-new { background: rgba(155,48,255,0.2); color: var(--purple); border: 1px solid rgba(155,48,255,0.4); }
+  .badge-fix { background: rgba(0,245,255,0.1); color: var(--glitch2); border: 1px solid rgba(0,245,255,0.3); }
+  .badge-change { background: rgba(255,45,255,0.1); color: var(--glitch1); border: 1px solid rgba(255,45,255,0.3); }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid rgba(155,48,255,0.15);
+    padding: 3rem 2rem;
+    text-align: center;
+  }
+  .footer-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 3rem;
+    letter-spacing: 0.3em;
+    color: var(--purple);
+    opacity: 0.4;
+    margin-bottom: 1rem;
+  }
+  .footer-text {
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: var(--text-dim);
+    text-transform: uppercase;
+  }
+  .footer-text a { color: var(--purple); text-decoration: none; }
+
+  /* TERMINAL TICKER */
+  .ticker {
+    background: var(--purple-dark);
+    border-top: 1px solid rgba(155,48,255,0.3);
+    border-bottom: 1px solid rgba(155,48,255,0.3);
+    padding: 0.6rem 0;
+    overflow: hidden;
+    white-space: nowrap;
+  }
+  .ticker-inner {
+    display: inline-block;
+    animation: ticker 20s linear infinite;
+    font-size: 0.65rem;
+    letter-spacing: 0.2em;
+    color: var(--purple);
+    text-transform: uppercase;
+  }
+  @keyframes ticker {
+    0% { transform: translateX(100vw); }
+    100% { transform: translateX(-100%); }
+  }
+
+  /* ANIMATIONS */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* CUSTOM SCROLLBAR */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--purple-dim); }
+
+  /* GLITCH TEXT UTILITY */
+  .glitch-text {
+    position: relative;
+    display: inline-block;
+  }
+  .glitch-text::before {
+    content: attr(data-text);
+    position: absolute;
+    left: -2px;
+    color: var(--glitch1);
+    animation: microGlitch 6s infinite;
+    clip-path: polygon(0 30%, 100% 30%, 100% 50%, 0 50%);
+  }
+  @keyframes microGlitch {
+    0%, 95%, 100% { opacity: 0; transform: none; }
+    96% { opacity: 0.7; transform: translateX(-3px); }
+    97% { opacity: 0; }
+    98% { opacity: 0.5; transform: translateX(3px); }
+    99% { opacity: 0; }
+  }
+
+  @media (max-width: 600px) {
+    nav { padding: 1rem 1.5rem; }
+    .nav-links { gap: 1rem; }
+    .stats-bar { gap: 2rem; flex-wrap: wrap; padding: 1.5rem; }
+    .hero-title { font-size: 6rem; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">ZYN</div>
+  <ul class="nav-links">
+    <li><a href="#features">Modules</a></li>
+    <li><a href="#changelog">Changelog</a></li>
+    <li><a href="/client/index.html">Play</a></li>
+  </ul>
+</nav>
+
+<!-- TICKER -->
+<div class="ticker" style="margin-top:64px;">
+  <span class="ticker-inner">
+    ZYN CLIENT v1.0 — EAGLERCRAFT 1.8 — KILLAURA ✦ FLY ✦ ESP ✦ TRACERS ✦ SPEED ✦ NOFALL ✦ FULLBRIGHT ✦ AIMASSIST ✦ SCAFFOLD ✦ AUTOSPRINTER — NOW AVAILABLE —&nbsp;&nbsp;&nbsp;&nbsp;
+  </span>
+</div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid"></div>
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+
+  <div class="hero-content">
+    <p class="hero-eyebrow">// eaglercraft 1.8 client</p>
+    <h1 class="hero-title">
+      <span class="glitch-wrap">ZYN</span>
+    </h1>
+    <p class="hero-sub">dominate the server. <span>leave no trace.</span></p>
+    <div class="hero-cta">
+      <a href="/client/index.html" class="btn-primary">▶ &nbsp;Launch Game</a>
+      <a href="#features" class="btn-secondary">View Modules</a>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="stat">
+    <div class="stat-num">40+</div>
+    <div class="stat-label">Modules</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">1.8</div>
+    <div class="stat-label">Version</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">0ms</div>
+    <div class="stat-label">Install</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">∞</div>
+    <div class="stat-label">Power</div>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="section-header">
+    <span class="section-tag">// modules</span>
+    <h2 class="section-title">Full <span>Arsenal</span></h2>
+  </div>
+
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-cat">Combat</div>
+      <div class="feature-name">KillAura</div>
+      <div class="feature-desc">Auto-attack nearby entities with configurable range, speed, and target priority. Rotate smoothly to avoid detection.</div>
+      <div class="feature-icon">⚔</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-cat">Movement</div>
+      <div class="feature-name">Fly</div>
+      <div class="feature-desc">Freefly and vanilla fly modes. Adjustable speed with anti-kick evasion built in.</div>
+      <div class="feature-icon">🜁</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-cat">Render</div>
+      <div class="feature-name">ESP</div>
+      <div class="feature-desc">See players through walls. Box, outline, and health-bar render modes with custom color per team.</div>
+      <div class="feature-icon">◈</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-cat">Combat</div>
+      <div class="feature-name">AimAssist</div>
+      <div class="feature-desc">Smooth aim correction toward targets. Humanized with configurable FOV and strength curves.</div>
+      <div class="feature-icon">⊕</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-cat">Movement</div>
+      <div class="feature-name">Speed</div>
+      <div class="feature-desc">BHop, strafe, and speed modes. Bypass motion checks with adaptive speed regulation.</div>
+      <div class="feature-icon">◎</div>
+    </div>
+    <div class="feature-card">
+      <div class="feature-cat">World</div>
+      <div class="feature-name">Scaffold</div>
+      <div class="feature-desc">Auto-places blocks under you as you walk. Tower and scaffold modes included.</div>
+      <div class="feature-icon">▦</div>
+    </div>
+  </div>
+
+  <!-- MODULE TAGS -->
+  <div class="module-list">
+    <div class="module-tag">NoFall</div>
+    <div class="module-tag">Tracers</div>
+    <div class="module-tag">Fullbright</div>
+    <div class="module-tag">AutoSprint</div>
+    <div class="module-tag">Criticals</div>
+    <div class="module-tag">AntiKnockback</div>
+    <div class="module-tag">Reach</div>
+    <div class="module-tag">AutoClicker</div>
+    <div class="module-tag">Step</div>
+    <div class="module-tag">Sneak</div>
+    <div class="module-tag">NoHunger</div>
+    <div class="module-tag">FastEat</div>
+    <div class="module-tag">Nameplates</div>
+    <div class="module-tag">Chams</div>
+    <div class="module-tag">HUD</div>
+    <div class="module-tag">AutoRespawn</div>
+    <div class="module-tag">ChatSpammer</div>
+    <div class="module-tag">Nuker</div>
+    <div class="module-tag">AntiAFK</div>
+    <div class="module-tag">Timer</div>
+  </div>
+</section>
+
+<!-- CHANGELOG -->
+<section id="changelog">
+  <div class="section-header">
+    <span class="section-tag">// history</span>
+    <h2 class="section-title">Change<span>log</span></h2>
+  </div>
+
+  <div class="changelog-list">
+    <div class="changelog-entry">
+      <span class="changelog-version">v1.0.0</span>
+      <span class="changelog-date">— Initial Release</span>
+      <ul class="changelog-items">
+        <li><span>Initial public release of Zyn client</span> <span class="badge badge-new">new</span></li>
+        <li><span>ClickGUI with drag-and-drop panels</span> <span class="badge badge-new">new</span></li>
+        <li><span>40+ modules across Combat, Movement, Render, World, Misc</span> <span class="badge badge-new">new</span></li>
+        <li><span>HUD array list with module states</span> <span class="badge badge-new">new</span></li>
+        <li><span>Config save/load system</span> <span class="badge badge-new">new</span></li>
+      </ul>
+    </div>
+    <div class="changelog-entry">
+      <span class="changelog-version">v0.9.2</span>
+      <span class="changelog-date">— Beta</span>
+      <ul class="changelog-items">
+        <li><span>KillAura rotation smoothing improved</span> <span class="badge badge-change">change</span></li>
+        <li><span>Fixed fly mode causing disconnect on some servers</span> <span class="badge badge-fix">fix</span></li>
+        <li><span>Added Scaffold tower mode</span> <span class="badge badge-new">new</span></li>
+        <li><span>ESP now renders through fog correctly</span> <span class="badge badge-fix">fix</span></li>
+      </ul>
+    </div>
+    <div class="changelog-entry">
+      <span class="changelog-version">v0.9.0</span>
+      <span class="changelog-date">— Beta</span>
+      <ul class="changelog-items">
+        <li><span>First closed beta build</span> <span class="badge badge-new">new</span></li>
+        <li><span>Core module system architecture</span> <span class="badge badge-new">new</span></li>
+        <li><span>Basic Combat, Movement, Render modules</span> <span class="badge badge-new">new</span></li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">ZYN</div>
+  <p class="footer-text">not affiliated with mojang or eaglercraft — for educational purposes</p>
+</footer>
+
+<script>
+  // GLITCH RANDOM EFFECT ON HOVER
+  document.querySelectorAll('.feature-card').forEach(card => {
+    card.addEventListener('mouseenter', () => {
+      const name = card.querySelector('.feature-name');
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#@%&';
+      const original = name.textContent;
+      let i = 0;
+      const interval = setInterval(() => {
+        name.textContent = original.split('').map((c, idx) => {
+          if (idx < i) return original[idx];
+          return chars[Math.floor(Math.random() * chars.length)];
+        }).join('');
+        i++;
+        if (i > original.length) {
+          clearInterval(interval);
+          name.textContent = original;
+        }
+      }, 40);
+    });
+  });
+
+  // COUNTER ANIMATION
+  document.querySelectorAll('.stat-num').forEach(el => {
+    const text = el.textContent;
+    if (text === '∞' || text === '1.8' || text === '0ms') return;
+    const target = parseInt(text);
+    let current = 0;
+    const step = Math.ceil(target / 30);
+    const interval = setInterval(() => {
+      current = Math.min(current + step, target);
+      el.textContent = current + (text.includes('+') ? '+' : '');
+      if (current >= target) clearInterval(interval);
+    }, 40);
+  });
+</script>
+</body>
 </html>
